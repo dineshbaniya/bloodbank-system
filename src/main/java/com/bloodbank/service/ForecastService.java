@@ -1,5 +1,6 @@
 package com.bloodbank.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -9,14 +10,17 @@ import java.util.Map;
 public class ForecastService {
 
     private final RestTemplate restTemplate;
+    private final String pythonServiceUrl;
 
-    private static final String PYTHON_SERVICE_URL = "http://127.0.0.1:5000/forecast/from-db";
-
-    public ForecastService(RestTemplate restTemplate) {
+    public ForecastService(
+            RestTemplate restTemplate,
+            @Value("${AI_SERVICE_URL:http://127.0.0.1:5000}") String aiServiceUrl
+    ) {
         this.restTemplate = restTemplate;
+        this.pythonServiceUrl = aiServiceUrl + "/forecast/from-db";
     }
 
     public Map getForecastFromDatabase() {
-        return restTemplate.getForObject(PYTHON_SERVICE_URL, Map.class);
+        return restTemplate.getForObject(pythonServiceUrl, Map.class);
     }
 }
