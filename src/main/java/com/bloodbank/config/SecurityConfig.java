@@ -22,7 +22,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .cors(cors -> {})
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/organizations/**", "/api/users", "/api/signup/**").permitAll()
+            .requestMatchers("/api/organizations/**", "/api/signup/**").permitAll()
+             .requestMatchers("/api/users").hasRole("SUPER_ADMIN")
             .requestMatchers("/api/inventory/reserve").hasAnyRole("BANK_STAFF", "SUPER_ADMIN")
             .requestMatchers("/api/alerts/send/**", "/api/alerts/escalate/**").hasAnyRole("BANK_STAFF", "SUPER_ADMIN")
             .anyRequest().authenticated()
