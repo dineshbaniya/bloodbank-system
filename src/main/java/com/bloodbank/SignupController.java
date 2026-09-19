@@ -14,19 +14,22 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/signup")
 public class SignupController {
 
-        private final UserRepository userRepository;
-    private final DonorRepository donorRepository;
-    private final com.bloodbank.repository.OrganizationRepository organizationRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+private final DonorRepository donorRepository;
+private final com.bloodbank.repository.OrganizationRepository organizationRepository;
+private final PasswordEncoder passwordEncoder;
+private final com.bloodbank.service.GeocodingService geocodingService;
 
-    public SignupController(UserRepository userRepository, DonorRepository donorRepository,
-                             com.bloodbank.repository.OrganizationRepository organizationRepository,
-                             PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.donorRepository = donorRepository;
-        this.organizationRepository = organizationRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+public SignupController(UserRepository userRepository, DonorRepository donorRepository,
+                         com.bloodbank.repository.OrganizationRepository organizationRepository,
+                         PasswordEncoder passwordEncoder,
+                         com.bloodbank.service.GeocodingService geocodingService) {
+    this.userRepository = userRepository;
+    this.donorRepository = donorRepository;
+    this.organizationRepository = organizationRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.geocodingService = geocodingService;
+}
 
     @PostMapping("/donor")
     public String registerDonor(@RequestBody DonorSignupRequest request) {
@@ -42,13 +45,20 @@ public class SignupController {
         user.setRole(UserRole.DONOR);
         User savedUser = userRepository.save(user);
 
-        Donor donor = new Donor();
-        donor.setFullName(request.getFullName());
-        donor.setPhoneNumber(request.getPhoneNumber());
-        donor.setBloodGroup(BloodGroup.valueOf(request.getBloodGroup()));
-        donor.setAddress(request.getAddress());
-        donor.setUser(savedUser);
-        donorRepository.save(donor);
+       Donor donor = new Donor();
+       donor.setFullName(request.getFullName());
+       donor.setPhoneNumber(request.getPhoneNumber());
+       donor.setBloodGroup(BloodGroup.valueOf(request.getBloodGroup()));
+          donor.setAddress(request.getAddress());
+       donor.setUser(savedUser);
+
+      double[] coordinates = geocodingService.geocodeAddress(request.getAddress());
+     if (coordinates != null) {
+       donor.setLatitude(coordinates[0]);
+       donor.setLongitude(coordinates[1]);
+     }
+
+    donorRepository.save(donor);
 
         return "Account created successfully. You can now log in.";
     }
