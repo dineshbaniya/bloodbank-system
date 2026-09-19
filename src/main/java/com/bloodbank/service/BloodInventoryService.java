@@ -60,4 +60,18 @@ public class BloodInventoryService {
 
         return reserved;
     }
+    @Transactional
+public void issueUnits(BloodRequest request) {
+    List<BloodInventory> reservedUnits = bloodInventoryRepository.findAll().stream()
+            .filter(unit -> unit.getReservedForRequest() != null
+                    && unit.getReservedForRequest().getId().equals(request.getId())
+                    && unit.getStatus() == InventoryStatus.RESERVED)
+            .toList();
+
+    for (BloodInventory unit : reservedUnits) {
+        unit.setStatus(InventoryStatus.ISSUED);
+        unit.setIssuedToOrg(request.getRequestingOrg());
+        bloodInventoryRepository.save(unit);
+    }
+}
 }

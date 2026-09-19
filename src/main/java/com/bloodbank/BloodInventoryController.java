@@ -1,8 +1,11 @@
 package com.bloodbank;
 
 import com.bloodbank.model.BloodInventory;
+import com.bloodbank.model.BloodRequest;
 import com.bloodbank.model.InventoryStatus;
 import com.bloodbank.repository.BloodInventoryRepository;
+import com.bloodbank.repository.BloodRequestRepository;
+import com.bloodbank.service.BloodInventoryService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -13,9 +16,15 @@ import java.util.List;
 public class BloodInventoryController {
 
     private final BloodInventoryRepository bloodInventoryRepository;
+    private final BloodRequestRepository bloodRequestRepository;
+    private final BloodInventoryService bloodInventoryService;
 
-    public BloodInventoryController(BloodInventoryRepository bloodInventoryRepository) {
+    public BloodInventoryController(BloodInventoryRepository bloodInventoryRepository,
+                                     BloodRequestRepository bloodRequestRepository,
+                                     BloodInventoryService bloodInventoryService) {
         this.bloodInventoryRepository = bloodInventoryRepository;
+        this.bloodRequestRepository = bloodRequestRepository;
+        this.bloodInventoryService = bloodInventoryService;
     }
 
     @PostMapping
@@ -34,5 +43,14 @@ public class BloodInventoryController {
         return bloodInventoryRepository.findByStatusAndExpiryDateLessThanEqualOrderByExpiryDateAsc(
                 InventoryStatus.AVAILABLE, cutoff
         );
+    }
+
+    @PostMapping("/issue/{requestId}")
+    public String issue(@PathVariable Long requestId) {
+        BloodRequest request = bloodRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
+        bloodInventoryService.issueUnits(request);
+        String orgName = request.getRequestingOrg() != null ? request.getRequestingOrg().getName() : "the requesting hospital";
+        return "Units issued to " + orgName;
     }
 }
