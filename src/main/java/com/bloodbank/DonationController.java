@@ -27,10 +27,26 @@ public class DonationController {
         this.userRepository = userRepository;
     }
 
-    @PostMapping
-    public Donation create(@RequestBody Donation donation) {
-        return donationRepository.save(donation);
+   @PostMapping
+public Donation create(@RequestBody Donation donation) {
+    Donation saved = donationRepository.save(donation);
+
+    Donor donor = donation.getDonor();
+    if (donor != null) {
+        Donor existingDonor = donorRepository.findById(donor.getId())
+                .orElseThrow(() -> new RuntimeException("Donor not found: " + donor.getId()));
+
+        existingDonor.setTotalDonations(
+                (existingDonor.getTotalDonations() == null ? 0 : existingDonor.getTotalDonations()) + 1
+        );
+        existingDonor.setLastDonationDate(
+                donation.getDonationDate() != null ? donation.getDonationDate() : java.time.LocalDate.now()
+        );
+        donorRepository.save(existingDonor);
     }
+
+    return saved;
+}
 
     @GetMapping
     public List<Donation> getAll() {
