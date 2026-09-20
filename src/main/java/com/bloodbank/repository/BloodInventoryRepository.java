@@ -15,19 +15,21 @@ import java.util.List;
 public interface BloodInventoryRepository extends JpaRepository<BloodInventory, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            SELECT b FROM BloodInventory b
-            WHERE b.bloodGroup = :bloodGroup
-              AND b.componentType = :componentType
-              AND b.status = com.bloodbank.model.InventoryStatus.AVAILABLE
-            ORDER BY b.expiryDate ASC
-            """)
-    List<BloodInventory> findAvailableUnitsForUpdate(
-            @Param("bloodGroup") BloodGroup bloodGroup,
-            @Param("componentType") ComponentType componentType
-    );
+@Query("""
+        SELECT b FROM BloodInventory b
+        WHERE b.bloodGroup = :bloodGroup
+          AND b.componentType = :componentType
+          AND b.status = com.bloodbank.model.InventoryStatus.AVAILABLE
+          AND b.expiryDate >= CURRENT_DATE
+        ORDER BY b.expiryDate ASC
+        """)
+        List<BloodInventory> findAvailableUnitsForUpdate(
+        @Param("bloodGroup") BloodGroup bloodGroup,
+        @Param("componentType") ComponentType componentType
+          );
 
     List<BloodInventory> findByStatusAndExpiryDateLessThanEqualOrderByExpiryDateAsc(
             InventoryStatus status, java.time.LocalDate cutoffDate
     );
+    List<BloodInventory> findByStatusAndExpiryDateLessThan(InventoryStatus status, java.time.LocalDate date);
 }
