@@ -1,5 +1,7 @@
 package com.bloodbank.service;
 
+import com.bloodbank.model.FulfillmentMethod;
+
 import com.bloodbank.model.BloodInventory;
 import com.bloodbank.model.BloodRequest;
 import com.bloodbank.model.InventoryStatus;
@@ -45,17 +47,23 @@ public class BloodInventoryService {
         }
 
         if (!reserved.isEmpty()) {
-            int newFulfilled = request.getQuantityFulfilled() + reserved.size();
-            request.setQuantityFulfilled(newFulfilled);
+        int newFulfilled = request.getQuantityFulfilled() + reserved.size();
+         request.setQuantityFulfilled(newFulfilled);
 
-            if (newFulfilled >= request.getQuantityNeeded()) {
-                request.setStatus(RequestStatus.FULFILLED);
-                request.setFulfilledAt(LocalDateTime.now());
-            } else {
-                request.setStatus(RequestStatus.PARTIALLY_FULFILLED);
-            }
+        if (request.getFulfillmentMethod() == null) {
+         request.setFulfillmentMethod(FulfillmentMethod.BANK_STOCK);
+        } else if (request.getFulfillmentMethod() == FulfillmentMethod.DONOR_ALERT) {
+        request.setFulfillmentMethod(FulfillmentMethod.MIXED);
+        }
 
-            bloodRequestRepository.save(request);
+        if (newFulfilled >= request.getQuantityNeeded()) {
+        request.setStatus(RequestStatus.FULFILLED);
+        request.setFulfilledAt(LocalDateTime.now());
+         } else {
+        request.setStatus(RequestStatus.PARTIALLY_FULFILLED);
+      }
+
+       bloodRequestRepository.save(request);
         }
 
         return reserved;

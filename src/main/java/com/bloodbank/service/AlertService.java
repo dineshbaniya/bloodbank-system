@@ -1,7 +1,9 @@
 package com.bloodbank.service;
 
 import com.bloodbank.model.*;
+import com.bloodbank.model.FulfillmentMethod;
 import com.bloodbank.repository.AlertLogRepository;
+import com.bloodbank.repository.BloodRequestRepository;
 import com.bloodbank.repository.DonorRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,16 +16,19 @@ public class AlertService {
     private static final double[] RADIUS_TIERS_KM = {5, 10, 20, 40};
 
     private final DonorRepository donorRepository;
-    private final AlertLogRepository alertLogRepository;
-    private final NotificationService notificationService;
+private final AlertLogRepository alertLogRepository;
+private final NotificationService notificationService;
+private final BloodRequestRepository bloodRequestRepository;
 
-    public AlertService(DonorRepository donorRepository,
-                         AlertLogRepository alertLogRepository,
-                         NotificationService notificationService) {
-        this.donorRepository = donorRepository;
-        this.alertLogRepository = alertLogRepository;
-        this.notificationService = notificationService;
-    }
+public AlertService(DonorRepository donorRepository,
+                     AlertLogRepository alertLogRepository,
+                     NotificationService notificationService,
+                     BloodRequestRepository bloodRequestRepository) {
+    this.donorRepository = donorRepository;
+    this.alertLogRepository = alertLogRepository;
+    this.notificationService = notificationService;
+    this.bloodRequestRepository = bloodRequestRepository;
+}
 
     public List<Donor> findNearbyDonors(String bloodGroup, double lat, double lng, double radiusKm) {
         return donorRepository.findEligibleDonorsWithinRadius(bloodGroup, lat, lng, radiusKm);
@@ -60,25 +65,34 @@ public class AlertService {
         return sendAlertsAtRadius(request, lat, lng, nextRadius);
     }
 
-    private List<AlertLog> sendAlertsAtRadius(BloodRequest request, double lat, double lng, double radiusKm) {
-        List<Donor> donors = donorRepository.findEligibleDonorsWithinRadiusExcludingAlerted(
-             request.getBloodGroup().name(), lat, lng, radiusKm, request.getId());
+   private List<AlertLog> sendAlertsAtRadius(BloodRequest request, double lat, double lng, double radiusKm) {
+    List<Donor> donors = donorRepository.findEligibleDonorsWithinRadiusExcludingAlerted(
+         request.getBloodGroup().name(), lat, lng, radiusKm, request.getId());
 
-        return donors.stream().map(donor -> {
-            String message = "Urgent: " + request.getBloodGroup().name() +
-                    " blood needed nearby. Reply YES if you can donate today.";
-            notificationService.sendSms(donor.getPhoneNumber(), message);
-
-            AlertLog log = new AlertLog();
-            log.setRequest(request);
-            log.setDonor(donor);
-            log.setSearchRadiusKm(radiusKm);
-            log.setSentAt(LocalDateTime.now());
-            log.setChannel(AlertChannel.SMS);
-            log.setStatus(AlertStatus.SENT);
-            return alertLogRepository.save(log);
-        }).toList();
+    if (!donors.isEmpty()) {
+        if (request.getFulfillmentMethod() == null) {
+            request.setFulfillmentMethod(FulfillmentMethod.DONOR_ALERT);
+        } else if (request.getFulfillmentMethod() == FulfillmentMethod.BANK_STOCK) {
+            request.setFulfillmentMethod(FulfillmentMethod.MIXED);
+        }
+        bloodRequestRepository.save(request);
     }
+
+    return donors.stream().map(donor -> {
+        String message = "Urgent: " + request.getBloodGroup().name() +
+                " blood needed nearby. Reply YES if you can donate today.";
+        notificationService.sendSms(donor.getPhoneNumber(), message);
+
+        AlertLog log = new AlertLog();
+        log.setRequest(request);
+        log.setDonor(donor);
+        log.setSearchRadiusKm(radiusKm);
+        log.setSentAt(LocalDateTime.now());
+        log.setChannel(AlertChannel.SMS);
+        log.setStatus(AlertStatus.SENT);
+        return alertLogRepository.save(log);
+    }).toList();
+}
 
     private double nextTierAbove(double currentRadius) {
         for (double tier : RADIUS_TIERS_KM) {

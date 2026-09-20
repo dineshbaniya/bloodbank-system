@@ -14,13 +14,16 @@ import java.util.List;
 @RequestMapping("/api/requests")
 public class BloodRequestController {
 
-    private final BloodRequestRepository bloodRequestRepository;
-    private final UserRepository userRepository;
+private final BloodRequestRepository bloodRequestRepository;
+private final UserRepository userRepository;
+private final com.bloodbank.repository.AlertLogRepository alertLogRepository;
 
-    public BloodRequestController(BloodRequestRepository bloodRequestRepository, UserRepository userRepository) {
-        this.bloodRequestRepository = bloodRequestRepository;
-        this.userRepository = userRepository;
-    }
+public BloodRequestController(BloodRequestRepository bloodRequestRepository, UserRepository userRepository,
+                               com.bloodbank.repository.AlertLogRepository alertLogRepository) {
+    this.bloodRequestRepository = bloodRequestRepository;
+    this.userRepository = userRepository;
+    this.alertLogRepository = alertLogRepository;
+}
 
     @PostMapping
     public BloodRequest create(@RequestBody BloodRequest request) {
@@ -32,18 +35,27 @@ public class BloodRequestController {
         return bloodRequestRepository.findAll();
     }
 
-    @GetMapping("/my-organization")
-    public List<BloodRequest> getMyOrganizationRequests() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String email = authentication.getName();
+   @GetMapping("/my-organization")
+public List<com.bloodbank.dto.BloodRequestResponseDTO> getMyOrganizationRequests() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    String email = authentication.getName();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getOrganization() == null) {
-            throw new RuntimeException("This account is not linked to any organization.");
-        }
-
-        return bloodRequestRepository.findByRequestingOrgId(user.getOrganization().getId());
+    if (user.getOrganization() == null) {
+        throw new RuntimeException("This account is not linked to any organization.");
     }
+
+    List<BloodRequest> requests = bloodRequestRepository.findByRequestingOrgId(user.getOrganization().getId());
+
+    return requests.stream()
+            .map(request -> {
+                boolean anyResponded = alertLogRepository.existsByRequestIdAndStatus(
+                        request.getId(), com.bloodbank.model.AlertStatus.RESPONDED
+                );
+                return com.bloodbank.dto.BloodRequestResponseDTO.fromEntity(request, anyResponded);
+            })
+            .toList();
+}
 }

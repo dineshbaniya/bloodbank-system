@@ -35,6 +35,9 @@ public class BloodRequest {
     @Enumerated(EnumType.STRING)
     private RequestStatus status = RequestStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    private FulfillmentMethod fulfillmentMethod;
+
     @ManyToOne
     @JoinColumn(name = "requested_by_user_id")
     private User requestedByUser;
@@ -78,6 +81,9 @@ public class BloodRequest {
 
     public RequestStatus getStatus() { return status; }
     public void setStatus(RequestStatus status) { this.status = status; }
+
+    public FulfillmentMethod getFulfillmentMethod() { return fulfillmentMethod; }
+    public void setFulfillmentMethod(FulfillmentMethod fulfillmentMethod) { this.fulfillmentMethod = fulfillmentMethod; }
 
     public User getRequestedByUser() { return requestedByUser; }
     public void setRequestedByUser(User requestedByUser) { this.requestedByUser = requestedByUser; }
